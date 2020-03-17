@@ -3,8 +3,7 @@ import {
     TransformerContext, 
     InvalidDirectiveError, 
     TransformerContractError,
-    getDirectiveArguments,
-    SyncUtils
+    getDirectiveArguments
 } from "graphql-transformer-core";
 
 import {
