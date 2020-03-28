@@ -178,7 +178,7 @@ export class MyTransformer extends Transformer {
     ) => {
         if (parent.kind === Kind.INTERFACE_TYPE_DEFINITION) {
             throw new InvalidDirectiveError(
-                `The @auto directive cannot be placed on an interface's field. See ${parent.name.value}${definition.name.value}`
+                `The @nullable directive cannot be placed on an interface's field. See ${parent.name.value}${definition.name.value}`
             )
         }
 
