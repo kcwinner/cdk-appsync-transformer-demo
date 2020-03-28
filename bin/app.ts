@@ -5,11 +5,11 @@ import { AppStack } from '../lib/app-stack';
 
 import { SchemaTransformer } from '../lib/schema-transformer';
 
-const STAGE = process.env.STAGE || 'dev'
-
 const transformer = new SchemaTransformer();
 let outputs = transformer.transform();
 let resolvers = transformer.getResolvers();
+
+const STAGE = process.env.STAGE || 'demo'
 
 const app = new cdk.App(
 { 
