@@ -228,11 +228,13 @@ const app = new cdk.App({
 new AppStack(app, 'AppStack', outputs, resolvers);
 ```
 
+All code can be found [here](https://github.com/kcwinner/cdk-appsync-transformer-demo/)
+
 ### Where Do We Go From Here?
 
+This would work much better as a CDK plugin or an npm package. Unfortunately the CDK plugin system currently only supports credential providers at the moment. I played around with writing it in as a plugin (it sort of works) but you would have to write the cfdoc to a file and read it from your app to bring in the resources.
 
-
-### References
+## References
 
 * [Amplify Docs](https://aws-amplify.github.io/docs/)
-* 
+* [GraphQL Auto Transformer](https://github.com/hirochachacha/graphql-auto-transformer)

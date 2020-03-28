@@ -7,7 +7,6 @@ Accompanying repo for blog post regarding CDK AppSync Transformations. Find the 
 * Node JS
 * [AWS CDK](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html)
     * `npm install -g aws-cdk`
-* 
 
 ## Dependencies
 
@@ -19,11 +18,3 @@ Accompanying repo for blog post regarding CDK AppSync Transformations. Find the 
 ## Resources / References
 
 * [Amplify GraphQL Transform](https://aws-amplify.github.io/docs/cli-toolchain/graphql)
-
-## Useful commands
-
- * `npm run build`   compile typescript to js
- * `npm run watch`   watch for changes and compile
- * `npm run test`    perform the jest unit tests
- * `cdk diff`        compare deployed stack with current state
- * `cdk synth > template.yaml && sam build && sam local invoke`     Allows for running of sam locally
