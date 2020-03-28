@@ -23,10 +23,10 @@ type Product
 }
 ```
 
-After transformation we get the below schema, as well as resolvers and cloudformation for a DynamoDB Table.
-
 <details>
-  <summary>Click to expand</summary>
+    <summary>
+        After transformation we get the following schema, as well as resolvers and cloudformation for a DynamoDB Table. Click to expand!
+    </summary>
 
 ```
 type Product {
@@ -101,13 +101,13 @@ Using the GraphQL Transform plugin we turned 9 lines of SDL with a declaration i
 
 ### Pitfalls of using AWS Amplify CLI
 
-As great as many of the features of the Amplify CLI are, I don't like to use it on a large scale project. I prefer to define my resources using the AWS Cloud Development Kit. Unfortunately for me the transformation plugin only exists in the Amplify CLI. I decided that in order to emulate this functionality I would take the same transformation packages used in the Amplify CLI and integrate them into my CDK project!
+As great as many of the features of the Amplify CLI are, I don't like to use it on a large scale project. I prefer to define my resources using the AWS Cloud Development Kit (CDK). Unfortunately for me the transformation plugin only exists in the Amplify CLI. I decided that in order to emulate this functionality I would take the same transformation packages used in the Amplify CLI and integrate them into my CDK project!
 
 #### Recreating The Schema Transformer
 
 In order to emulate the Amplify CLI transformer we have to have a schema transformer and import the existing transformers. Luckily the Amplify docs show us an implementation [here](https://aws-amplify.github.io/docs/cli-toolchain/plugins?sdk=js). Since we want to have all the same directives available to us we must implement the same packages and structure outlined above. This gives us our directive resolution, resolver creation, and template generation!
 
-This gives us something like this:
+We end up with something like this:
 
 ```typescript
 import { GraphQLTransform } from 'graphql-transformer-core';
@@ -169,11 +169,46 @@ export class SchemaTransformer {
 
 #### Writing Our Own Transformer
 
-After implementing the schema transformer exactly the same I realized it doesn't fit our CDK implementation perfectly. For example, instead of json cloudformation output of our dynamo tables we want iterable resources that can be created via the CDK. In comes our own [transformer!](https://github.com/kcwinner/cdk-appsync-transformer-demo/blob/master/lib/transformer.ts)
+After implementing the schema transformer exactly the same I realized it doesn't fit our CDK implementation perfectly. For example, instead of json cloudformation output of our dynamo tables we want iterable resources that can be created via the CDK. In comes our own [transformer](https://github.com/kcwinner/cdk-appsync-transformer-demo/blob/master/lib/transformer.ts)! 
+
+In this custom transformer we do two things - look for the @nullable directive and grab the transformer context after completion. 
+
+##### @nullable Directive
+
+When creating a custom key using the `@key` direction on a model the associated resolver does not allow for using `$util.autoId()` to generate a unique identifier and creation time. I've implemented this new directive using [graphql-auto-transformer](https://github.com/hirochachacha/graphql-auto-transformer) as a guide. This outputs a modified resolver for the field with our custom directive.
+
+##### Post Transformation
+
+After schema transformation is complete our custom transformer grabs the context, searches for `AWS::DynamoDB::Table` resources, and builds a table object for us to create a table from later. Later, we can loop over this output and create our tables and resolvers like so:
+
+```typescript
+createTablesAndResolvers(api: GraphQLApi, tableData: any, resolvers: any) {
+    Object.keys(tableData).forEach((tableKey: any) => {
+      let table = this.createTable(tableData[tableKey]);
+
+      const dataSource = api.addDynamoDbDataSource(tableKey, `Data source for ${tableKey}`, table);
+
+      Object.keys(resolvers).forEach((resolverKey: any) => {
+        let resolverTableName = this.getTableNameFromFieldName(resolverKey)
+        if (tableKey === resolverTableName) {
+          let resolver = resolvers[resolverKey]
+
+          dataSource.createResolver({
+            typeName: resolver.typeName,
+            fieldName: resolver.fieldName,
+            requestMappingTemplate: MappingTemplate.fromFile(resolver.requestMappingTemplate),
+            responseMappingTemplate: MappingTemplate.fromFile(resolver.responseMappingTemplate),
+          })
+        }
+      })
+    });
+  }
+```
 
 #### Using The Schema Transformer
 
-`./bin/app.ts`
+In order to run our transformer before the CDK's template generation we must import our transformer, run transformer, and pass the data to our stack!
+
 ```typescript
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
