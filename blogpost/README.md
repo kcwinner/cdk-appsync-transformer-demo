@@ -10,7 +10,7 @@ If you are familiar with AppSync you know how frustrating it can be to build out
 
 The Amplify CLI introduced some amazing packages to help transform your AppSync SDL into types, queries, mutations, subscriptions, tables and resolvers. Using [supported directives](https://aws-amplify.github.io/docs/cli-toolchain/graphql?sdk=js#directives) the cli transformation plugin will transform your SDL into deployable templates, streamlining the process of creating AppSync APIs. 
 
-An example directive for a model looks like this:
+An example directive for the @model directive looks like this:
 ```
 type Product
   @model {
@@ -25,7 +25,10 @@ type Product
 
 After transformation we get the below schema, as well as resolvers and cloudformation for a DynamoDB Table.
 
-```collapsible
+<details>
+  <summary>Click to expand</summary>
+
+```
 type Product {
   id: ID!
   name: String!
@@ -92,6 +95,8 @@ type Subscription {
 }
 ```
 
+</details>
+
 Using the GraphQL Transform plugin we turned 9 lines of SDL with a declaration into 62 lines. Extrapolate this to multiple types and we begin to see how automated transformations not only save us time but also give us a concise way of declaring some of the boilerplate around AppSync APIs.
 
 ### Pitfalls of using AWS Amplify CLI
@@ -111,10 +116,8 @@ import { ModelConnectionTransformer } from 'graphql-connection-transformer';
 import { KeyTransformer } from 'graphql-key-transformer';
 import { FunctionTransformer } from 'graphql-function-transformer';
 import { VersionedModelTransformer } from 'graphql-versioned-transformer';
-
 import { ModelAuthTransformer, ModelAuthTransformerConfig } from 'graphql-auth-transformer'
 const { AppSyncTransformer } = require('graphql-appsync-transformer')
-
 import { normalize } from 'path';
 import * as fs from "fs";
 
@@ -175,20 +178,16 @@ After implementing the schema transformer exactly the same I realized it doesn't
 #!/usr/bin/env node
 import * as cdk from '@aws-cdk/core';
 import { AppStack } from '../lib/app-stack';
-
 import { SchemaTransformer } from '../lib/schema-transformer';
 
 const transformer = new SchemaTransformer();
-let outputs = transformer.transform();
-let resolvers = transformer.getResolvers();
+const outputs = transformer.transform();
+const resolvers = transformer.getResolvers();
 
 const STAGE = process.env.STAGE || 'demo'
 
-const app = new cdk.App(
-{ 
-    context: { 
-        STAGE: STAGE
-    }
+const app = new cdk.App({ 
+    context: { STAGE: STAGE }
 })
 
 new AppStack(app, 'AppStack', outputs, resolvers);
@@ -200,5 +199,5 @@ new AppStack(app, 'AppStack', outputs, resolvers);
 
 ### References
 
-* 
+* [Amplify Docs](https://aws-amplify.github.io/docs/)
 * 
