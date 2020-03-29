@@ -2,16 +2,19 @@
 
 ## Deploying with automated schema definition language (SDL) transforms
 
-### The Problem With AppSync
+All code and information can be found [on GitHub](https://github.com/kcwinner/cdk-appsync-transformer-demo/).
 
-If you are familiar with AppSync you know how frustrating it can be to build out a full API, writing each individual piece of SDL for your models, your connections, filters, queries and mutations. Not only must you write the SDL you have to also write each resolver using velocity template language (VTL). A simple application can easily become a few hundred lines of SDL, VTL and Cloudformation. 
+### The Challenge With AppSync
+
+If you are familiar with AppSync, you know how frustrating it can be to build out a full API, writing each individual piece of the schema for your models, your connections, filters, queries, and mutations. Not only must you write the schema, you have to also write each resolver using velocity template language (VTL). A simple application can quickly become a few hundred lines of SDL, VTL, and Cloudformation. 
 
 ### [GraphQL Transform](https://docs.amplify.aws/cli/graphql-transformer/storage) Saves The Day
 
-The Amplify CLI introduced some amazing packages to help transform your AppSync SDL into types, queries, mutations, subscriptions, tables and resolvers. Using [supported directives](https://aws-amplify.github.io/docs/cli-toolchain/graphql?sdk=js#directives) the cli transformation plugin will transform your SDL into deployable templates, streamlining the process of creating AppSync APIs. 
+The Amplify CLI introduced some fantastic packages to help transform your AppSync schema into types, queries, mutations, subscriptions, tables, and resolvers using something called the GraphQL Schema Definition Language (SDL). Using [supported directives](https://aws-amplify.github.io/docs/cli-toolchain/graphql?sdk=js#directives) the CLI transformation plugin will transform your SDL into deployable templates, streamlining the process of creating AppSync APIs. 
 
 An example directive for the @model directive looks like this:
-```
+
+```graphql
 type Product
   @model {
     id: ID!
@@ -23,12 +26,9 @@ type Product
 }
 ```
 
-<details>
-    <summary>
-        After transformation we get the following schema, as well as resolvers and cloudformation for a DynamoDB Table. Click to expand!
-    </summary>
+After transformation, we get the following schema, as well as resolvers and CloudFormation for a DynamoDB table.
 
-```
+```graphql
 type Product {
   id: ID!
   name: String!
@@ -95,17 +95,15 @@ type Subscription {
 }
 ```
 
-</details>
+Using the GraphQL Transform plugin, we turned 9 lines of SDL with a declaration into 62 lines. Extrapolate this to multiple types, and we begin to see how automated transformations not only save us time but also give us a concise way of declaring some of the boilerplate around AppSync APIs.
 
-Using the GraphQL Transform plugin we turned 9 lines of SDL with a declaration into 62 lines. Extrapolate this to multiple types and we begin to see how automated transformations not only save us time but also give us a concise way of declaring some of the boilerplate around AppSync APIs.
+### Challenges of using AWS Amplify CLI
 
-### Pitfalls of using AWS Amplify CLI
-
-As great as many of the features of the Amplify CLI are, I don't like to use it on a large scale project. I prefer to define my resources using the AWS Cloud Development Kit (CDK). Unfortunately for me the transformation plugin only exists in the Amplify CLI. I decided that in order to emulate this functionality I would take the same transformation packages used in the Amplify CLI and integrate them into my CDK project!
+As outstanding as many of the features of the Amplify CLI are, I've found I personally prefer to define my resources using the AWS Cloud Development Kit (CDK) since it's easier to integrate with other existing systems and processes. Unfortunately for me, the transformation plugin only exists in the Amplify CLI. I decided that to emulate this functionality, I would take the same transformation packages used in the Amplify CLI and integrate them into my CDK project!
 
 #### Recreating The Schema Transformer
 
-In order to emulate the Amplify CLI transformer we have to have a schema transformer and import the existing transformers. Luckily the Amplify docs show us an implementation [here](https://aws-amplify.github.io/docs/cli-toolchain/plugins?sdk=js). Since we want to have all the same directives available to us we must implement the same packages and structure outlined above. This gives us our directive resolution, resolver creation, and template generation!
+To emulate the Amplify CLI transformer, we have to have a schema transformer and import the existing transformers. Luckily the Amplify docs show us an implementation [here](https://aws-amplify.github.io/docs/cli-toolchain/plugins?sdk=js). Since we want to have all the same directives available to us, we must implement the same packages and structure outlined above. This gives us our directive resolution, resolver creation, and template generation!
 
 We end up with something like this:
 
@@ -169,17 +167,17 @@ export class SchemaTransformer {
 
 #### Writing Our Own Transformer
 
-After implementing the schema transformer exactly the same I realized it doesn't fit our CDK implementation perfectly. For example, instead of json cloudformation output of our dynamo tables we want iterable resources that can be created via the CDK. In comes our own [transformer](https://github.com/kcwinner/cdk-appsync-transformer-demo/blob/master/lib/transformer.ts)! 
+After implementing the schema transformer exactly the same, I realized it doesn't fit our CDK implementation perfectly. For example, instead of the JSON CloudFormation output of our DynamoDB tables, we want iterable resources that can be created via the CDK. In comes our own [transformer](https://github.com/kcwinner/cdk-appsync-transformer-demo/blob/master/lib/transformer.ts)! 
 
-In this custom transformer we do two things - look for the @nullable directive and grab the transformer context after completion. 
+In this custom transformer, we do two things - look for the @nullable directive and grab the transformer context after completion. 
 
 ##### @nullable Directive
 
-When creating a custom key using the `@key` direction on a model the associated resolver does not allow for using `$util.autoId()` to generate a unique identifier and creation time. I've implemented this new directive using [graphql-auto-transformer](https://github.com/hirochachacha/graphql-auto-transformer) as a guide. This outputs a modified resolver for the field with our custom directive.
+When creating a custom key using the `@key` direction on a model, the associated resolver does not allow for using `$util.autoId()` to generate a unique identifier and creation time. I've implemented this new directive using [graphql-auto-transformer](https://github.com/hirochachacha/graphql-auto-transformer) as a guide. This outputs a modified resolver for the field with our custom directive.
 
 ##### Post Transformation
 
-After schema transformation is complete our custom transformer grabs the context, searches for `AWS::DynamoDB::Table` resources, and builds a table object for us to create a table from later. Later, we can loop over this output and create our tables and resolvers like so:
+After schema transformation is complete, our custom transformer grabs the context, searches for `AWS::DynamoDB::Table` resources, and builds a table object for us to create a table from later. Later, we can loop over this output and create our tables and resolvers like so:
 
 ```typescript
 createTablesAndResolvers(api: GraphQLApi, tableData: any, resolvers: any) {
@@ -207,7 +205,7 @@ createTablesAndResolvers(api: GraphQLApi, tableData: any, resolvers: any) {
 
 #### Using The Schema Transformer
 
-In order to run our transformer before the CDK's template generation we must import our transformer, run transformer, and pass the data to our stack!
+To run our transformer before the CDK's template generation, we must import our transformer, run the transformer, and pass the data to our stack!
 
 ```typescript
 #!/usr/bin/env node
@@ -232,7 +230,7 @@ All code can be found [here](https://github.com/kcwinner/cdk-appsync-transformer
 
 ### Where Do We Go From Here?
 
-This would work much better as a CDK plugin or an npm package. Unfortunately the CDK plugin system currently only supports credential providers at the moment. I played around with writing it in as a plugin (it sort of works) but you would have to write the cfdoc to a file and read it from your app to bring in the resources.
+We believe this would work much better as a CDK plugin or an npm package. Unfortunately, the CDK plugin system currently only supports credential providers at the moment. I played around with writing it in as a plugin (it sort of works), but you would have to write the cfdoc to a file and read it from your app to bring in the resources.
 
 ## References
 
