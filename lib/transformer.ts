@@ -43,6 +43,7 @@ import {
     DynamoDBMappingTemplate
 } from 'graphql-mapping-template'
 
+// Needs cleaned up
 const cloudform_types_1 = require('cloudform-types')
 
 import Resource from "cloudform/types/resource";

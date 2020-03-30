@@ -9,6 +9,9 @@ const transformer = new SchemaTransformer();
 let outputs = transformer.transform();
 let resolvers = transformer.getResolvers();
 
+// AWS Guidance below. However, I prefer to use the cdk context for environment values instead of multiple stacks
+// https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+// https://github.com/aws/aws-cdk/issues/4846#issuecomment-552797597
 const STAGE = process.env.STAGE || 'demo'
 
 const app = new cdk.App(
