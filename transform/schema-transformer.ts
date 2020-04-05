@@ -4,30 +4,44 @@ import { ModelConnectionTransformer } from 'graphql-connection-transformer';
 import { KeyTransformer } from 'graphql-key-transformer';
 import { FunctionTransformer } from 'graphql-function-transformer';
 import { VersionedModelTransformer } from 'graphql-versioned-transformer';
+import { ModelAuthTransformer, ModelAuthTransformerConfig, } from 'graphql-auth-transformer';
 
-import { 
-    ModelAuthTransformer, 
-    ModelAuthTransformerConfig,
-} from 'graphql-auth-transformer'
+import {
+    TransformConfig,
+    TRANSFORM_CURRENT_VERSION,
+    TRANSFORM_CONFIG_FILE_NAME
+} from 'graphql-transformer-core/lib/util/transformConfig';
 
 const { AppSyncTransformer } = require('graphql-appsync-transformer')
 const { MyTransformer } = require('./transformer');
 
-import { normalize } from 'path';
+import { normalize, join } from 'path';
 import * as fs from "fs";
 
-const outputPath = './appsync'
+export interface SchemaTransformerProps {
+    outputPath?: string
+    enableDeletionProtection?: boolean
+    enableSync?: boolean
+}
 
 export class SchemaTransformer {
     outputs: any
     resolvers: any
+    outputPath: string
+    enableDeletionProtection: boolean
+    enableSync: boolean
 
-    constructor() {
+    constructor(props?: SchemaTransformerProps) {
         this.resolvers = {}
+
+        this.outputPath = props?.outputPath || './appsync';
+        this.enableDeletionProtection = props?.enableDeletionProtection || false;
+        this.enableSync = props?.enableSync || true
     }
 
     transform() {
         // These config values do not even matter... So set it up for both
+        // Typically this is loaded from amplify in `backend-config.json`
         const authTransformerConfig: ModelAuthTransformerConfig = {
             authConfig: {
                 defaultAuthentication: {
@@ -48,10 +62,13 @@ export class SchemaTransformer {
             }
         }
 
+        let transformConfig = this.loadConfigSync('transform/');
+
         // Note: This is not exact as we are omitting the @searchable transformer.
         const transformer = new GraphQLTransform({
+            transformConfig: transformConfig,
             transformers: [
-                new AppSyncTransformer(outputPath),
+                new AppSyncTransformer(this.outputPath),
                 new DynamoDBModelTransformer(),
                 new VersionedModelTransformer(),
                 new FunctionTransformer(),
@@ -88,7 +105,7 @@ export class SchemaTransformer {
                         fieldName: name,
                     }
                 }
-                
+
                 if (templateType === 'request') {
                     this.resolvers[name]['requestMappingTemplate'] = filepath
                 } else if (templateType === 'response') {
@@ -98,5 +115,24 @@ export class SchemaTransformer {
         }
 
         return this.resolvers;
+    }
+
+    private loadConfigSync(projectDir: string): TransformConfig {
+        // Initialize the config always with the latest version, other members are optional for now.
+        let config = {
+            Version: TRANSFORM_CURRENT_VERSION
+        };
+    
+        try {
+            const configPath = join(projectDir, TRANSFORM_CONFIG_FILE_NAME);
+            const configExists = fs.existsSync(configPath);
+            if (configExists) {
+                const configStr = fs.readFileSync(configPath);
+                config = JSON.parse(configStr.toString());
+            }
+            return config as TransformConfig;
+        } catch (err) {
+            return config;
+        }
     }
 }

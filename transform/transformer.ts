@@ -1,7 +1,7 @@
-import { 
-    Transformer, 
-    TransformerContext, 
-    InvalidDirectiveError, 
+import {
+    Transformer,
+    TransformerContext,
+    InvalidDirectiveError,
     TransformerContractError,
     getDirectiveArguments
 } from "graphql-transformer-core";
@@ -11,21 +11,20 @@ import {
     DirectiveNode,
     InterfaceTypeDefinitionNode,
     FieldDefinitionNode,
-    Kind,
-    //@ts-ignore
-} from 'graphql'
+    Kind
+} from 'graphql';
 
-import { 
+import {
     ResourceConstants,
-    ModelResourceIDs, 
+    ModelResourceIDs,
     ResolverResourceIDs,
-    isNonNullType, 
-    makeInputValueDefinition, 
+    isNonNullType,
+    makeInputValueDefinition,
     unwrapNonNull,
     toCamelCase,
     graphqlName,
     toUpper
-} from 'graphql-transformer-common'
+} from 'graphql-transformer-common';
 
 import {
     set,
@@ -41,35 +40,44 @@ import {
     iff,
     and,
     DynamoDBMappingTemplate
-} from 'graphql-mapping-template'
+} from 'graphql-mapping-template';
 
-// Needs cleaned up
+// TODO: Needs cleaned up
 const cloudform_types_1 = require('cloudform-types')
 
-import Resource from "cloudform/types/resource";
+import Resource from "cloudform-types/types/resource";
 import { normalize } from "path";
 import fs = require('fs');
+
+export interface TransformerConfig {
+    enableSync?: boolean
+    outputPath?: string
+}
 
 export class MyTransformer extends Transformer {
     outputPath: string
     tables: any
+    enableSync: boolean
 
-    constructor(outputPath?: string) {
+    constructor(config?: TransformerConfig) {
         super(
             'MyTransformer',
-            'directive @nullable on FIELD_DEFINITION' 
+            'directive @nullable on FIELD_DEFINITION'
         )
+        
         this.tables = {}
 
-        if (outputPath) {
-            this.outputPath = normalize(outputPath)
+        if (config?.outputPath) {
+            this.outputPath = normalize(config.outputPath);
         }
     }
 
+    public before = (ctx: TransformerContext): void => {}
+
     public after = (ctx: TransformerContext): void => {
-        if (!this.outputPath) {
-            this.printWithoutFilePath(ctx);
-        } else {
+        this.printWithoutFilePath(ctx);
+
+        if (this.outputPath) {
             this.printWithFilePath(ctx);
             this.tables.forEach((table: any) => {
                 this.writeTableToFile(table)
@@ -92,7 +100,6 @@ export class MyTransformer extends Transformer {
     }
 
     private printWithFilePath(ctx: TransformerContext): void {
-
         if (!fs.existsSync(this.outputPath)) {
             fs.mkdirSync(this.outputPath);
         }
@@ -103,62 +110,71 @@ export class MyTransformer extends Transformer {
             files.forEach(file => fs.unlinkSync(tableFilePath + '/' + file))
             fs.rmdirSync(tableFilePath)
         }
-
-        // @ts-ignore
-        const templateResources: { [key: string]: Resource } = ctx.template.Resources
-
-        for (const resourceName of Object.keys(templateResources)) {
-            const resource: Resource = templateResources[resourceName]
-            if (resource.Type === 'AWS::DynamoDB::Table') {
-                this.buildTablesFromResource(resourceName, ctx)
-            }
-        }
     }
 
     private buildTablesFromResource(resourceName: string, ctx: TransformerContext): void {
         // @ts-ignore
         const tableResource = ctx.template.Resources[resourceName]
 
-        let partitionKey: any = {}
-        let sortKey: any = {}
-
         const attributeDefinitions = tableResource.Properties?.AttributeDefinitions
         const keySchema = tableResource.Properties?.KeySchema
 
-        if (keySchema.length == 1) {
-            partitionKey = {
-                name: attributeDefinitions[0].AttributeName,
-                type: attributeDefinitions[0].AttributeType
-            }
-        } else {
-            keySchema.forEach((key: any) => {
-                let keyType = key.KeyType
-                let attributeName = key.AttributeName
+        let keys = this.parseKeySchema(keySchema, attributeDefinitions);
 
-                let attribute = attributeDefinitions.find((attribute: any) => {
-                    return attribute.AttributeName === attributeName
-                })
+        let table = {
+            TableName: resourceName,
+            PartitionKey: keys.partitionKey,
+            SortKey: keys.sortKey,
+            TTL: tableResource.Properties?.TimeToLiveSpecification,
+            GlobalSecondaryIndexes: [] as any[]
+        }
 
-                if (keyType === 'HASH') {
-                    partitionKey = {
-                        name: attribute.AttributeName,
-                        type: attribute.AttributeType
-                    }
-                } else if (keyType === 'RANGE') {
-                    sortKey = {
-                        name: attribute.AttributeName,
-                        type: attribute.AttributeType
-                    }
+        const gsis = tableResource.Properties?.GlobalSecondaryIndexes;
+        if (gsis) {
+            gsis.forEach((gsi: any) => {
+                let gsiKeys = this.parseKeySchema(gsi.KeySchema, attributeDefinitions);
+                let gsiDefinition = {
+                    IndexName: gsi.IndexName,
+                    Projection: gsi.Projection,
+                    PartitionKey: gsiKeys.partitionKey,
+                    SortKey: gsiKeys.sortKey,
                 }
+
+                table.GlobalSecondaryIndexes.push(gsiDefinition);
             })
         }
 
-        this.tables[resourceName] = {
-            TableName: resourceName,
-            KeySchema: keySchema,
-            AttributeDefinitions: attributeDefinitions,
-            PartitionKey: partitionKey,
-            SortKey: sortKey
+        this.tables[resourceName] = table
+    }
+
+    private parseKeySchema(keySchema: any, attributeDefinitions: any, ) {
+        let partitionKey: any = {}
+        let sortKey: any = {}
+
+        keySchema.forEach((key: any) => {
+            let keyType = key.KeyType
+            let attributeName = key.AttributeName
+
+            let attribute = attributeDefinitions.find((attribute: any) => {
+                return attribute.AttributeName === attributeName
+            })
+
+            if (keyType === 'HASH') {
+                partitionKey = {
+                    name: attribute.AttributeName,
+                    type: attribute.AttributeType
+                }
+            } else if (keyType === 'RANGE') {
+                sortKey = {
+                    name: attribute.AttributeName,
+                    type: attribute.AttributeType
+                }
+            }
+        })
+
+        return {
+            partitionKey,
+            sortKey
         }
     }
 
@@ -271,8 +287,8 @@ export class MyTransformer extends Transformer {
                 ifElse(raw(`$util.isNull($${ResourceConstants.SNIPPETS.DynamoDBNameOverrideMap})`), set(ref(ResourceConstants.SNIPPETS.DynamoDBNameOverrideMap), obj({
                     [condensedSortKey]: str(dynamoDBFriendlySortKeyName),
                 })),
-                //@ts-ignore
-                qref(`$${ResourceConstants.SNIPPETS.DynamoDBNameOverrideMap}.put("${condensedSortKey}", "${dynamoDBFriendlySortKeyName}")`)),
+                    //@ts-ignore
+                    qref(`$${ResourceConstants.SNIPPETS.DynamoDBNameOverrideMap}.put("${condensedSortKey}", "${dynamoDBFriendlySortKeyName}")`)),
                 qref(`$ctx.args.input.put("${condensedSortKey}","${condensedSortKeyValue}")`),
             ]));
         }

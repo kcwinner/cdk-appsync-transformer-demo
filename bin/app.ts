@@ -1,13 +1,12 @@
 #!/usr/bin/env node
-import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
 import { AppStack } from '../lib/app-stack';
 
-import { SchemaTransformer } from '../lib/schema-transformer';
+import { SchemaTransformer } from '../transform/schema-transformer';
 
 const transformer = new SchemaTransformer();
-let outputs = transformer.transform();
-let resolvers = transformer.getResolvers();
+const outputs = transformer.transform();
+const resolvers = transformer.getResolvers();
 
 // AWS Guidance below. However, I prefer to use the cdk context for environment values instead of multiple stacks
 // https://docs.aws.amazon.com/cdk/latest/guide/environments.html
