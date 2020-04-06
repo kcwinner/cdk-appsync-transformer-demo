@@ -22,7 +22,3 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
     * Add the line `"providerPlugin": "awscloudformation",` underneath `"service": "AppSync",`
     * Since we are also using a custom field directive that I built, @nullable, in the example, we have to remove that from `amplify/backend/api/demo-api-demo/schema.graphql`. Don't worry, I'll figure something better out for this...
 * `amplify codegen models`
-
-
-* `cp ../appsync/schema.graphql ./amplify/#current-cloud-backend/api/demo-api-demo/`
-* `cp ../schema.graphql ./amplify/backend/api/demo-api-demo/`

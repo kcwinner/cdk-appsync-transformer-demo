@@ -70,8 +70,6 @@ We believe this would work much better as a CDK plugin or an npm package. Unfort
 
 I'm not sold on the `transform.conf.json` method for triggering the sync enablement. I went this route because this is what the Amplify libraries do. Originally I was going to have props passed in to the `SchemaTransformer` (there are still some remnants of this code as I decide what to do...).
 
-
-
 ## Resources / References
 
 * [Amplify GraphQL Transform](https://aws-amplify.github.io/docs/cli-toolchain/graphql)
