@@ -5,7 +5,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 ## Amplify Setup
 
 * `amplify init`
-* `npm install --save @aws-amplify/datastore`
+* `npm install`
 
 ### Add Api And Codegen
 
@@ -15,7 +15,6 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
     * `enter`
     * `Y`
     * `Y`
-
 
 * `mkdir -p ./amplify/#current-cloud-backend/api/demo-api-demo/ && cp ../appsync/schema.graphql "$_"`
 * `mkdir -p ./amplify/backend/api/demo-api-demo/ && cp ../schema.graphql "$_"`
