@@ -1,10 +1,5 @@
 type Customer
-  @model
-  @versioned
-  @auth(rules: [
-    { allow: groups, groups: ["Admin"] },
-    { allow: owner }
-  ]) {
+  @model {
     id: ID!
     firstName: String!
     lastName: String!
