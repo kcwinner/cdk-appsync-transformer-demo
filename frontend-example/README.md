@@ -5,6 +5,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 ## Amplify Setup
 
 * `amplify init`
+* `npm install --save @aws-amplify/datastore`
 
 ### Add Api And Codegen
 
