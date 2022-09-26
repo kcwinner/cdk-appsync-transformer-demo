@@ -14,7 +14,7 @@
     "@aws-cdk/assert": "1.31.0",
     "@types/jest": "^24.0.22",
     "@types/node": "10.17.5",
-    "aws-cdk": "1.31.0",
+    "aws-cdk": "1.174.0",
     "cloudform-types": "^4.1.0",
     "graphql": "^15.0.0",
     "graphql-appsync-transformer": "^1.0.35",
